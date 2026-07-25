@@ -1,0 +1,176 @@
+refactor(frontend): close typed-state end-to-end (api + useState + casts)
+
+End the typed `Invoice` contract at the API and `useState` boundaries,
+closing the only remaining `as any` / `useState<any>` / `as InvoiceStatus`
+loose-typing surfaces in the frontend data flow. Five file touches plus
+two recovery fixes from the placeholder-shape gap; single atomic commit
+per `#19` cohesive-cleanup directive.
+
+## What changed
+
+### Five file edits
+
+1. `frontend/lib/utils.ts` — type additions only.
+   * New `ApiResponse<T>` envelope
+     `{ success: boolean; data: T; error?: string; pagination?: {...} }`.
+     Mirrors `backend/src/controllers/invoice.controller.ts`.
+   * New `PaymentSession`
+     `{ invoice: Invoice; paymentUrl: string; qrCode: string; stellarQrCode: string }` —
+     shared shape for `createInvoice` and `getPaymentInfo` endpoints.
+   * New `InvoiceStats` (per-asset aggregate row, with `string | number`
+     for SQL aggregate values that arrive as `string` from node-postgres).
+   * New `CreateInvoiceInput` (frontend mirror of backend
+     `backend/src/utils/validation.ts`).
+
+2. `frontend/lib/api.ts` — full `invoiceApi` retype.
+   * Every method (`create`, `getById`, `getAll`, `getPaymentInfo`,
+     `cancel`, `verify`, `getStats`) gets an explicit
+     `Promise<ApiResponse<T>>` return signature and an
+     `api.post<ApiResponse<T>>(…)` / `api.get<ApiResponse<T>>(…)` generic.
+   * `stellarApi` and `healthCheck` deliberately kept `any`-typed (see
+     PR #1 "Known followups"); cohesive-cleanup scope is `invoiceApi`
+     only.
+   * `USE_MOCK_API ? mockInvoiceApi : realInvoiceApi` collapses to a
+     single type via the api↔mock boundary cast (see Recovery below).
+
+3. `frontend/app/page.tsx` —
+   * `useState<any>` for `createdInvoice` → `useState<PaymentSession | null>`.
+   * `handleInvoiceCreated = (result: any) => …` →
+     `(result: PaymentSession) => …`.
+   * `InvoiceForm` passes `result.data` (unwrapped PaymentSession) to
+     `onSuccess`; the parent's typed handler accepts that exactly.
+
+4. `frontend/app/dashboard/page.tsx` —
+   * `useState<any[]>` for `invoices` AND `filteredInvoices` →
+     `useState<Invoice[]>`.
+   * `useState<any>` for `stats` → `useState<InvoiceStats | null>`.
+   * `setStats(statsResult.data[0] || {})` → `?? null`; subsequent
+     `{stats && (…)}` guards already handle the null case correctly.
+   * `downloadInvoiceCSV(paidInvoices as any)` → `downloadInvoiceCSV(paidInvoices)`.
+   * `paymentCompleted(inv.status)` callers compile clean because
+     `inv.status: InvoiceStatus` is now typed via `Invoice[]`.
+
+5. `frontend/app/pay/[id]/page.tsx` —
+   * `useState<any>` for `paymentInfo` → `useState<PaymentSession | null>`.
+   * Four cast removals:
+     * line 46: `!interactiveStatus(result.data.status as InvoiceStatus)`
+       → `!interactiveStatus(result.data.status)`
+     * line 47: `setInvoice(result.data as Invoice)` →
+       `setInvoice(result.data)`
+     * line 49: `paymentCompleted(result.data.status as InvoiceStatus)`
+       → `paymentCompleted(result.data.status)`
+     * line 67: `setInvoice(invoiceResult.data as Invoice)` →
+       `setInvoice(invoiceResult.data)`
+
+### Recovery: api↔mock boundary cast
+
+After the api retyping, tsc surfaced a regression section chain:
+`mockInvoices` in `frontend/lib/mock-api.ts` is `any`-inferred with
+literal `status: string` widening; the conditional
+`USE_MOCK_API ? mockInvoiceApi : { …typed… }` resolved to a union with
+`status: string` shapes that defeat `Invoice`'s `status: 'PAID'` literal
+discriminator.
+
+Fix at the api/mock seam (single cast, in `api.ts` only — no consumer
+effects):
+
+```ts
+const realInvoiceApi = {
+  create: async (data: CreateInvoiceInput): Promise<ApiResponse<PaymentSession>> => …,
+  // … etc
+};
+
+export const invoiceApi: typeof realInvoiceApi = USE_MOCK_API
+  ? (mockInvoiceApi as typeof realInvoiceApi)
+  : realInvoiceApi;
+```
+
+The cast is type-only. Runtime compatibility is direct: mock's
+`mockInvoices[0]` has PAID fields and `status: 'PAID'`; `mockInvoices[1-3]`
+have non-PAID shapes; `create()` produces a non-PAID object; structurally
+matches `Invoice`. Re-typing `mock-api.ts` is a separate followup (mock
+fields currently inferred to `string`-widened union; outside scope).
+
+### Recovery: two narrow type strictnesses
+
+Two residual `tsc` errors after the api↔mock fix:
+
+1. `frontend/app/dashboard/page.tsx(218,33)` —
+   `parseFloat(stats.total_revenue || 0)` where `stats.total_revenue: string | number`.
+   Fix: `parseFloat(String(stats.total_revenue ?? 0))`. `String()` is
+   lossless for both number and string; runtime semantics unchanged.
+
+2. `frontend/app/pay/[id]/page.tsx(398,21)` —
+   `<QRCodeDisplay value={paymentInfo?.stellarQrCode || paymentInfo?.paymentUrl}>`
+   produces `string | undefined` under the new `PaymentSession | null`
+   typing; `QRCodeDisplay.value: string`. Fix: switch `||` to `??` and
+   append `?? ''` so the chain resolves to a literal `string`. Bonus:
+   preserves empty-string values that the backend may legitimately emit
+   as QR sources (the prior `||` would have skipped them as falsy).
+
+## Validation
+
+* `tsc --noEmit` → 0 errors
+* `vitest run` → 16 tests passing (no test churn — the existing
+  `interactiveStatus`/`paymentCompleted`/`getStatusColor` matrices are
+  unchanged)
+* `next lint` → 0 errors / 8 pre-existing warnings (unchanged)
+
+## Manifest sweep
+
+After this PR, all touched files have:
+* `as any` → 0
+* `useState<any>` → 0
+* `as InvoiceStatus` casts → 0
+* `as Invoice` / `as PaymentSession` casts → 0 at consumer sites
+
+The single remaining cast (`mockInvoiceApi as typeof realInvoiceApi`)
+is at the api↔mock seam, documented in JSDoc, type-only, and runtime-safe.
+
+## Out-of-scope residuals (tracked for separate PRs)
+
+1. ~~**Frontend `lib/mock-api.ts` retyping** — the single cast in `api.ts`
+   sidesteps the loose inference but doesn't fix it. A future PR can
+   type `mockInvoices: Invoice[]` explicitly + retype each method's
+   return signature to `Promise<ApiResponse<T>>`, dropping the
+   api/mock cast entirely. Plus: the mock's `verify` mutates status=PAID
+   + paymentTxHash + paidAt but NOT payerPublicKey; at runtime the typed
+   contract requires all three. `PaymentReceipt.tsx` currently masks
+   the runtime `undefined` via `|| 'N/A'` fallback but the typed
+   contract is silently violated.~~ **Resolved**: `mockInvoiceApi`
+   methods return `Promise<ApiResponse<T>>` against the typed envelope
+   in `frontend/lib/mock-api.ts` (typing-cleanup commits landed in the
+   cohesive-cleanup wave alongside `8e1a1f7`; tsc + vitest pass cleanly
+   through the api↔mock boundary cast). The mock's `verify` mutates
+   `payerPublicKey` (alongside `status` + `paymentTxHash` + `paidAt`)
+   per `frontend/lib/mock-api.ts:verify`,   eliminating the typed-contract silent-violation gap.
+   Confirmed: `frontend tsc --noEmit` returns 0 errors through the
+   api↔mock boundary cast `(mockInvoiceApi as typeof realInvoiceApi)`;
+   `frontend vitest run` passes the existing 16+10 test suite cleanly.
+
+2. ~~**Frontend `lib/stellar.ts`** — the `stellarApi` block in `lib/api.ts`
+   is still `any`-typed. Retype to mirror `ApiResponse<T>` shape with
+   appropriate `StellarAccount`/`StellarPayments`/`StellarTransaction`
+   types.~~ **Resolved**: typed-network-surface commit `befe9ed` (retype
+   Stellar network surface to `ApiResponse<T>`) typed the four
+   `stellarApi` methods against `StellarAccount`, `StellarPayments`,
+   `StellarTransaction`, `StellarPaymentVerification` — and the
+   SDK-direct helpers in `frontend/lib/stellar.ts` carry
+   `HorizonBalance` / `HorizonTransaction` / `HorizonPaymentOperation`
+   aliases from the `@stellar/stellar-sdk` `ServerApi` namespace. The
+   only loose surface left is the SDK-typing-quirk `as unknown as`
+   workaround for `CallBuilder.stream()` — pre-staged in
+   `.session-notes/commit-msg-stellar-retypes.txt` for release-driven
+   resolution (upstream SDK PR; tracked by
+   `.session-notes/bump-stellar-sdk.sh`).
+   Confirmed: `frontend tsc --noEmit` returns 0 errors across
+   `frontend/lib/api.ts` (typed HTTP layer) and `frontend/lib/stellar.ts`
+   (SDK-direct helpers); the only loose surface left is the upstream
+   SDK-typing-quirk workaround on `CallBuilder.stream()`, pre-staged in
+   `.session-notes/commit-msg-stellar-retypes.txt` for release-driven
+   resolution.
+
+3. **Backend** — none of the controller responses have explicit type
+   assertions; the frontend relies on `ApiResponse<T>` shapes inferred
+   from JSON serialization. A future PR could export these types from
+   a shared package.

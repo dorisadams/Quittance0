@@ -1,0 +1,108 @@
+refactor(frontend): drop last `as Invoice` cast and `useState<any>` in invoice page
+
+Closes the last typed-contract residual in
+`frontend/app/invoice/[id]/page.tsx`. Surgical mirror of the pay-page
+cleanup landed in commit `3cc93b4` — both shapes (state-shape `any`
+and `as Invoice` cast on `result.data`) are retired in a single
+atomic edit. After this commit:
+
+- `paymentInfo` is `useState<PaymentSession | null>(null)` (was
+  `useState<any>(null)`).
+- `setInvoice(invoiceResult.data)` is uncast (was
+  `setInvoice(invoiceResult.data as Invoice)`).
+- `setPaymentInfo(paymentResult.data)` becomes compile-time-checked
+  end-to-end against `Promise<ApiResponse<PaymentSession>>` from the
+  already-typed `api.getPaymentInfo`.
+
+Both API methods were retuned to typed `Promise<ApiResponse<T>>` returns
+in commit `8e1a1f7` (PR "close typed-state end-to-end"), so the cast
+already represents dead work — the call site was strictly a typing-
+defeater that lingered past the discriminated-union landing in
+`357873c`. This commit ends the residue at the invoice page's
+useState and result.data boundaries in the same shape `3cc93b4` did
+for the pay page.
+
+## Diff (verbatim, single-file)
+
+```diff
+--- a/frontend/app/invoice/[id]/page.tsx
++++ b/frontend/app/invoice/[id]/page.tsx
+@@ import @@
+-import { formatAmount, ..., interactiveStatus, paymentCompleted, type Invoice } from '@/lib/utils';
++import { formatAmount, ..., interactiveStatus, paymentCompleted, type Invoice, type PaymentSession } from '@/lib/utils';
+@@ state @@
+-  const [invoice, setInvoice] = useState<Invoice | null>(null);
+-  const [paymentInfo, setPaymentInfo] = useState<any>(null);
++  const [invoice, setInvoice] = useState<Invoice | null>(null);
++  // Mirrors `app/pay/[id]/page.tsx` (commit 3cc93b4): end the typed
++  // Invoice contract at the useState boundary. `api.getPaymentInfo`
++  // returns `Promise<ApiResponse<PaymentSession>>`, so the previously
++  // `any`-shaped state was strictly a typing-defeater.
++  const [paymentInfo, setPaymentInfo] = useState<PaymentSession | null>(null);
+@@ loadInvoice body @@
+-    setInvoice(invoiceResult.data as Invoice);
+-    setPaymentInfo(paymentResult.data);
++    // Cast removals — `api.getById` returns `Promise<ApiResponse<Invoice>>`
++    // and `api.getPaymentInfo` returns `Promise<ApiResponse<PaymentSession>>`,
++    // so both `.data` values are now correctly typed at the call site
++    // and the `as Invoice` shape-cast residue (introduced before the
++    // discriminated-union PR landed in commit `357873c`) is gone.
++    setInvoice(invoiceResult.data);
++    setPaymentInfo(paymentResult.data);
+```
+
+Validation
+==========
+
+- `tsc --noEmit` → 0 errors
+- `vitest run` → 16/16 (unchanged; no test churn — mirror of 3cc93b4)
+- `next lint` → 0 errors / 8 pre-existing warnings (unchanged)
+
+Out of scope (flagged by reviewer, do NOT bundle here)
+======================================================
+
+- Raw `invoice.status === 'PENDING'` / `'PAID'` / `'EXPIRED'` literals
+  at lines ~122, ~184, ~193, ~203, ~207 — per `commit-msg-fu3.txt`,
+  these sites are either content-rendering per status (which IS the
+  discriminated-union discriminator) or already routed through the
+  typed helpers in `c3f23a1`. Routing more JSX conditions through
+  `interactiveStatus(...)` / `paymentCompleted(...)` is a separate
+  cohesion pass.~~ **Resolved**: typed-helper routing landed in commit
+  `c3f23a1` (`refactor(frontend): type-safe status contract end-to-end
+  (#19 followup #3)`); per-status content-rendering sites retain
+  raw `=== 'STATUS'` literals as discriminated-union discriminators
+  (per `commit-msg-fu3.txt`'s explicit per-file permissions).
+  Confirmed: `frontend tsc --noEmit` returns 0 errors across the
+  per-status rendering sites; the typed helpers
+  `interactiveStatus(...)` / `paymentCompleted(...)` from
+  `frontend/lib/utils.ts` handle the boolean gates.
+- ~~`frontend/lib/api.ts` `stellarApi` block — still `any`-typed
+  (PR followup).~~ **Resolved**: typed-network-surface commit `befe9ed`
+  (`refactor(frontend): retype Stellar network surface to ApiResponse<T>`)
+  retyped the four `stellarApi` methods against the typed
+  `StellarAccount` / `StellarPayments` / `StellarTransaction` /
+  `StellarPaymentVerification` envelope.
+  Confirmed: `frontend tsc --noEmit` returns 0 errors across
+  `frontend/lib/api.ts`'s typed `stellarApi` block; the typed HTTP
+  envelope is in place across all four endpoints; the api/mock
+  boundary cast for `mockStellarApi` is the only remaining loose surface
+  (type-only, runtime-safe).
+- ~~`frontend/lib/mock-api.ts` retyping — drops the api↔mock boundary
+  cast at the seam (PR followup).~~ **Resolved**: `mockInvoiceApi`
+  methods return `Promise<ApiResponse<T>>` against the typed envelope
+  in `frontend/lib/mock-api.ts`; typing-cleanup commits landed in the
+  cohesive-cleanup wave alongside `8e1a1f7`; `tsc --noEmit` and
+  `vitest run` pass cleanly through the api/mock boundary cast.
+  Confirmed: `frontend tsc --noEmit` returns 0 errors across
+  `frontend/lib/mock-api.ts`; the api/mock boundary cast
+  `(mockInvoiceApi as typeof realInvoiceApi)` is type-only and
+  runtime-safe, matching the structural narrower shape of the real
+  api after `8e1a1f7`.
+- `lib/export.ts` `invoice.status.toLowerCase()` for CSS class on
+  line ~594 — could route through `getStatusColor` if PDF class names
+  track the inline CSS-class names used elsewhere (PR followup).
+
+Refs #19 (typed-status contract followup). Tracked independently of
+the cohesive-cleanup directive because the change is purely subtractive
+on behaviour for correctly-typed callers and isolates the last
+clearly-modeled residual in the invoice page.

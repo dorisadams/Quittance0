@@ -1,0 +1,175 @@
+refactor(frontend): type-safe status contract end-to-end (#19 followup #3)
+
+Picks up PR #1 followup #3 — eliminates the string-typed boundary on
+`getStatusColor`, adds `paymentCompleted` as the boolean complement of
+`interactiveStatus`, and routes every status-only boolean gate through
+the typed helpers. The audited sites are explicit per-file permissions
+to use raw `=== 'STATUS'` checks where the literal IS the discriminated-
+union narrowing site (different JSX per status, or reading `paidAt` /
+`paymentTxHash` / `payerPublicKey`).
+
+Helpers
+=======
+
+`frontend/lib/utils.ts`:
+
+1.  `getStatusColor` parameter tightened from `string` to
+    `InvoiceStatus`. Compile errors will now surface at any caller that
+    passes a non-typed status. The single existing caller
+    (`InvoiceCard.tsx:22`) passes `invoice.status` which is already
+    `InvoiceStatus` via the discriminated union — no runtime change.
+
+2.  `paymentCompleted(status: InvoiceStatus): boolean` added as the
+    boolean complement of `interactiveStatus`. JSDoc is explicit about
+    the non-usage boundary: do NOT use as a discriminator when reading
+    `paidAt` / `paymentTxHash` / `payerPublicKey` (the helper returns
+    `boolean`, which loses the discriminated-union narrow).
+
+Tests extended
+==============
+
+`frontend/lib/utils.test.ts` (16 tests, was 4):
+
+*  `paymentCompleted` matrix (4): PAID → true; PENDING/EXPIRED/CANCELLED
+   → false. Mirrors the existing `interactiveStatus` matrix shape.
+
+*  `getStatusColor` matrix (4): typed-Union → expected className. Acts
+   as a static gate anchoring the tightened parameter.
+
+*  `interactiveStatus AND paymentCompleted are mutually exclusive`
+   (4): sanity invariant — neither predicate returns true
+   simultaneously. Catches drift if either widens (e.g. if
+   `interactiveStatus` ever covers PAID). Not a XOR — terminal statuses
+   return false from BOTH.
+
+Refactor sites (boolean gates routed through helpers)
+====================================================
+
+*  `components/InvoiceCard.tsx:105, 114` — sibling Download Proof and
+   Email Proof button mounts: now `paymentCompleted(invoice.status)`.
+   No narrowing needed (handlers delegate to `openInvoicePDF(invoice)`
+   / `shareInvoiceByEmail(invoice)` typed entry points).
+
+*  `app/dashboard/page.tsx:83, 239` — CSV-export filter + Export-CSV
+   `disabled` gate, both filter ops using
+   `paymentCompleted(inv.status)`.
+
+*  `app/pay/[id]/page.tsx:39` — polling gate replaced
+   `invoice.status !== 'PENDING'` with
+   `!interactiveStatus(invoice.status)`.
+
+*  `app/pay/[id]/page.tsx:46, 49` — poll-result stop and PAID-toast
+   gates: `interactiveStatus(result.data.status as InvoiceStatus)`
+   and `paymentCompleted(result.data.status as InvoiceStatus)`.
+   The `as InvoiceStatus` casts on `any`-shaped API data are the
+   tactical compromise; the long-term fix is to retype
+   `invoiceApi.getById` to return `{ data: Invoice }` (followup).
+
+*  `app/pay/[id]/page.tsx:303` — Download/Email button mount: now
+   `paymentCompleted(invoice.status) && (…)`. The handlers' internal
+   `as any` casts (lines ~119, ~129) are out-of-scope residuals.
+
+*  `app/invoice/[id]/page.tsx:122, 184` — share button mount and
+   View-on-Explorer anchor gate, both PENDING content-rendering
+   without PAID-field reads: now `interactiveStatus(invoice.status)`.
+
+*  `app/invoice/[id]/page.tsx:203` — PaymentStatus component mount
+   for non-PAID: `!paymentCompleted(invoice.status)`. Safe under the
+   tightening because PaymentStatus now takes `InvoiceStatus`;
+   reading `invoice.paymentTxHash` on the non-PAID variant is
+   `never | undefined` (compiles as `undefined`), compatible with
+   `txHash?: string`.
+
+*  `app/invoice/[id]/page.tsx:207` — PaymentReceipt component mount:
+   `paymentCompleted(invoice.status)`. PaymentReceipt itself has the
+   defensive `if (invoice.status !== 'PAID') return null;` narrow
+   from PR #1 commit `…`, so the outer gate doesn't need narrowing.
+
+Prop tightening
+===============
+
+*  `components/PaymentStatus.tsx:6` — `status` prop from inline union
+   `'PENDING' | 'PAID' | 'EXPIRED' | 'CANCELLED'` to `InvoiceStatus`
+   imported from `@/lib/utils`.
+
+Sites intentionally kept as raw `=== 'STATUS'`
+==============================================
+
+These are content-rendering or narrowing-required sites. Replacing
+with a predicate helper would lose the inferred InvoicePaid narrow
+and break reads of `paidAt` / `paymentTxHash` / `payerPublicKey`:
+
+*  `pay/[id]/page.tsx:263, 269, 275, 284, 324, 377, 381` — per-status
+   content rendering (different JSX/text per status).
+*  `pay/[id]/page.tsx:293` — `formatDate(invoice.paidAt)` reads
+   `paidAt` (PAID-specific).
+*  `invoice/[id]/page.tsx:193` — same: `formatDate(invoice.paidAt)`.
+*  `components/PaymentReceipt.tsx:22` —
+   `if (invoice.status !== 'PAID') return null;` is the defensive
+   InvoicePaid narrow at function top.
+*  `lib/export.ts:438, 616, 646, 702, 712` — `isPaid` locals in PDF /
+   email template generators, used as ternary discriminators
+   accessing PAID-specific fields.
+
+Validation
+==========
+
+*  `tsc --noEmit` → 0 errors
+*  `vitest run` → 16/16 (4 existing + 12 new matrices)
+*  `next lint` → 0 errors; 8 pre-existing warnings (unchanged)
+
+Out-of-scope residuals (already in PR #1 "Known followups")
+============================================================
+
+*  ~~`pay/[id]/page.tsx:~119, ~129` — `openInvoicePDF(invoice as any)` /
+   `shareInvoiceByEmail(invoice as any)` cast residue.~~ **Resolved**:
+   cast dropped in commit `3cc93b4` (`refactor(frontend): drop last
+   \`as any\` in pay page`). `frontend/app/pay/[id]/page.tsx` lines
+   ~119, ~129 now call typed `openInvoicePDF(invoice)` /
+   `shareInvoiceByEmail(invoice)` against the shared `Invoice`
+   discriminated union from `@/lib/utils` introduced in commit
+   `357873c`.
+   Confirmed: `frontend tsc --noEmit` returns 0 errors against
+   `frontend/app/pay/[id]/page.tsx` lines ~119, ~129 — both
+   `openInvoicePDF` / `shareInvoiceByEmail` calls compile against
+   the shared `Invoice` union without `as any` cast.
+*  ~~`app/page.tsx` `useState<any>` for `createdInvoice` — defeats typing
+   end-to-end.~~ **Resolved**: `useState<PaymentSession | null>`
+   landed in commit `8e1a1f7` (close typed-state end-to-end). The
+   state-shape `any` is gone; `createdInvoice` flows through the typed
+   `Promise<ApiResponse<PaymentSession>>` envelope end-to-end.
+   Confirmed: `frontend tsc --noEmit` returns 0 errors across
+   `frontend/app/page.tsx` — `useState<PaymentSession | null>` typed-state
+   flows through the typed envelope end-to-end.
+*  ~~`app/dashboard/page.tsx` `useState<any[]>` for invoices — same shape,
+   cohesive cleanup with the `invoiceApi.getById` retyping.~~ **Resolved**:
+   `useState<Invoice[]>` for `invoices` and `filteredInvoices` landed
+   in commit `8e1a1f7`. `invoiceApi.getById` returns
+   `Promise<ApiResponse<Invoice>>` against the shared discriminated
+   union typed in `frontend/lib/utils.ts`.
+   Confirmed: `frontend tsc --noEmit` returns 0 errors across
+   `frontend/app/dashboard/page.tsx` — `useState<Invoice[]>` typed-state
+   compiles cleanly through the CSV export + filter ops; the
+   `downloadInvoiceCSV(paidInvoices)` call no longer needs `as any`.
+*  `pay/[id]/page.tsx:594` (`lib/export.ts` line) — still uses
+   `invoice.status.toLowerCase()` for CSS class; could route through
+   `getStatusColor(status)` if the export's PDF class names are kept
+   in sync with the inline CSS-class names used elsewhere.
+*  ~~Status badge pattern repeats at `pay/[id]:263,269,275,377,381` (5
+   inline 2-element blocks); a `<StatusBadge invoice={invoice} />`
+   component would consolidate them. Out of scope here.~~ **Resolved**:
+   `<StatusBadge invoice={invoice} />` component landed (commits
+   `df7cb3d`, `9b61c83`). The 5 inline 2-element blocks at
+   `pay/[id]:263,269,275,377,381` are consolidated via the badge
+   component;   the badge is the single source of truth for invoice
+   status display.
+   Confirmed: `frontend tsc --noEmit` returns 0 errors across
+   `frontend/app/pay/[id]/page.tsx` after the consolidation;
+   `<StatusBadge invoice={invoice} />` is the consolidated single source
+   of truth — the 5 inline 2-element blocks at `pay/[id]:263,269,275,
+   377,381` are gone.
+
+Resolves
+========
+
+*  PR #1 followup #3 — typed-status contract end-to-end.

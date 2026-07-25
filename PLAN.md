@@ -239,6 +239,7 @@ Each row = **one commit**. You create the commits; agent supplies the message.
 4. Server-side PDF  
 5. CI  
 6. Wire or remove Redis/Bull  
+7. Tech-debt followups not listed above; see `.session-notes/commit-msg-*.txt` deferred-status annotations + `.session-notes/bump-stellar-sdk.sh` for the consolidated bump script.
 
 ---
 
