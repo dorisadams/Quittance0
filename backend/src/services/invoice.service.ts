@@ -3,6 +3,7 @@ import { pool } from '../config/database';
 import { generateInvoiceMemo } from '../utils/memo';
 import { CreateInvoiceInput } from '../utils/validation';
 import { SELLER_PUBLIC_KEY } from '../config/stellar';
+import { InvoiceStats } from '../utils/invoice-types';
 
 /**
  * Backend SQL-service `Invoice` shape — discriminated union over `status`.
@@ -291,7 +292,7 @@ class InvoiceService {
   /**
    * Get invoice statistics
    */
-  async getInvoiceStats(sellerPublicKey: string): Promise<any> {
+  async getInvoiceStats(sellerPublicKey: string): Promise<InvoiceStats[]> {
     const query = `
       SELECT 
         COUNT(*) as total_invoices,

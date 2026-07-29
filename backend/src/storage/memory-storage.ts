@@ -1,5 +1,6 @@
 // In-memory storage - Database yerine MVP için
 import { v4 as uuidv4 } from 'uuid';
+import { InvoiceStats } from '../utils/invoice-types';
 
 /**
  * Backend `Invoice` shape — discriminated union over `status`. Mirrors
@@ -71,7 +72,8 @@ type InvoiceNonPaid = InvoiceCommon & {
   payerPublicKey?: never;
 };
 
-type Invoice = InvoicePaid | InvoiceNonPaid;
+export type Invoice = InvoicePaid | InvoiceNonPaid;
+
 
 class MemoryStorage {
   private invoices: Map<string, Invoice> = new Map();
@@ -190,7 +192,7 @@ class MemoryStorage {
   }
 
   // Get stats
-  getStats(sellerPublicKey: string): any {
+  getStats(sellerPublicKey: string): InvoiceStats {
     const invoices = Array.from(this.invoices.values()).filter(
       inv => inv.sellerPublicKey === sellerPublicKey
     );
