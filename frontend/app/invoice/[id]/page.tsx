@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { invoiceApi } from '@/lib/api';
@@ -24,11 +24,7 @@ export default function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [userWallet, setUserWallet] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadInvoice();
-  }, [id]);
-
-  const loadInvoice = async () => {
+  const loadInvoice = useCallback(async () => {
     try {
       const [invoiceResult, paymentResult] = await Promise.all([
         invoiceApi.getById(id),
@@ -44,7 +40,11 @@ export default function InvoiceDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadInvoice();
+  }, [id, loadInvoice]);
 
   const handleShare = async () => {
     if (!invoice) return;

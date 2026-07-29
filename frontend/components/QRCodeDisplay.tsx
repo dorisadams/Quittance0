@@ -3,6 +3,7 @@
 import { QRCodeSVG } from 'qrcode.react';
 import { Copy, Check } from 'lucide-react';
 import { useState } from 'react';
+import Image from 'next/image';
 import { copyToClipboard } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -44,11 +45,12 @@ export default function QRCodeDisplay({
       <div className="bg-white p-5 rounded-xl border-2 border-gray-200 shadow-lg">
         {isBase64Image ? (
           // Display base64 image from backend
-          <img 
+          <Image 
             src={value} 
             alt="QR Code" 
             width={size} 
             height={size}
+            unoptimized
             className="block"
           />
         ) : (

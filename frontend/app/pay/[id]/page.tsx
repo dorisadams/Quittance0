@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { invoiceApi } from '@/lib/api';
@@ -31,9 +31,24 @@ export default function PaymentPage() {
   const [payerName, setPayerName] = useState<string>('');
   const [payerEmail, setPayerEmail] = useState<string>('');
 
+  const loadInvoice = useCallback(async () => {
+    try {
+      const [invoiceResult, paymentResult] = await Promise.all([
+        invoiceApi.getById(id),
+        invoiceApi.getPaymentInfo(id),
+      ]);
+      setInvoice(invoiceResult.data);
+      setPaymentInfo(paymentResult.data);
+    } catch (error: any) {
+      toast.error('Failed to load invoice');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     loadInvoice();
-  }, [id]);
+  }, [id, loadInvoice]);
 
   // Auto-refresh for pending invoices
   useEffect(() => {
@@ -58,21 +73,6 @@ export default function PaymentPage() {
 
     return () => clearInterval(intervalId);
   }, [invoice, id, polling]);
-
-  const loadInvoice = async () => {
-    try {
-      const [invoiceResult, paymentResult] = await Promise.all([
-        invoiceApi.getById(id),
-        invoiceApi.getPaymentInfo(id),
-      ]);
-      setInvoice(invoiceResult.data);
-      setPaymentInfo(paymentResult.data);
-    } catch (error: any) {
-      toast.error('Failed to load invoice');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handlePaymentSuccess = async (txHash: string) => {
     toast.success('Payment sent! Verifying...');

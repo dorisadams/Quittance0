@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ArrowUpRight, ArrowDownLeft, ExternalLink, Loader2, Clock, Download, FileText, FileSpreadsheet } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatAddress } from '@/lib/utils';
@@ -33,30 +33,7 @@ export default function TransactionHistory({ publicKey, limit = 20 }: Transactio
   const [filter, setFilter] = useState<'all' | 'sent' | 'received'>('all');
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  useEffect(() => {
-    if (publicKey) {
-      loadTransactions();
-    }
-  }, [publicKey]);
-
-  // Close export menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showExportMenu) {
-        setShowExportMenu(false);
-      }
-    };
-
-    if (showExportMenu) {
-      document.addEventListener('click', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-    };
-  }, [showExportMenu]);
-
-  const loadTransactions = async () => {
+  const loadTransactions = useCallback(async () => {
     setLoading(true);
     try {
       // Import dynamically to avoid SSR issues
@@ -104,7 +81,30 @@ export default function TransactionHistory({ publicKey, limit = 20 }: Transactio
     } finally {
       setLoading(false);
     }
-  };
+  }, [publicKey, limit]);
+
+  useEffect(() => {
+    if (publicKey) {
+      loadTransactions();
+    }
+  }, [publicKey, loadTransactions]);
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showExportMenu) {
+        setShowExportMenu(false);
+      }
+    };
+
+    if (showExportMenu) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showExportMenu]);
 
   const filteredTransactions = transactions.filter((tx) => {
     if (filter === 'all') return true;

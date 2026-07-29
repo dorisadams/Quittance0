@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { invoiceApi } from '@/lib/api';
 import InvoiceCard from '@/components/InvoiceCard';
 import WalletConnect from '@/components/WalletConnect';
@@ -24,6 +24,27 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<'invoices' | 'transactions'>('invoices');
   const hasAnyInvoices = Number(stats?.total_invoices || 0) > 0;
 
+  const loadData = useCallback(async () => {
+    if (!publicKey) return;
+    try {
+      setLoading(true);
+      const [invoicesResult, statsResult] = await Promise.all([
+        invoiceApi.getAll({
+          status: filter === 'all' ? undefined : filter.toUpperCase(),
+          limit: 50,
+          sellerPublicKey: publicKey,
+        }),
+        invoiceApi.getStats(publicKey),
+      ]);
+      setInvoices(invoicesResult.data);
+      setStats(statsResult.data[0] ?? null);
+    } catch (error) {
+      toast.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, [publicKey, filter]);
+
   useEffect(() => {
     if (!connected || !publicKey) {
       setInvoices([]);
@@ -32,7 +53,7 @@ export default function DashboardPage() {
       return;
     }
     loadData();
-  }, [filter, connected, publicKey]);
+  }, [filter, connected, publicKey, loadData]);
 
   // Filter and search invoices
   useEffect(() => {
@@ -54,27 +75,6 @@ export default function DashboardPage() {
     });
     setFilteredInvoices(filtered);
   }, [searchQuery, invoices]);
-
-  const loadData = async () => {
-    if (!publicKey) return;
-    try {
-      setLoading(true);
-      const [invoicesResult, statsResult] = await Promise.all([
-        invoiceApi.getAll({
-          status: filter === 'all' ? undefined : filter.toUpperCase(),
-          limit: 50,
-          sellerPublicKey: publicKey,
-        }),
-        invoiceApi.getStats(publicKey),
-      ]);
-      setInvoices(invoicesResult.data);
-      setStats(statsResult.data[0] ?? null);
-    } catch (error) {
-      toast.error('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleExportCSV = () => {
     if (filteredInvoices.length === 0) {
