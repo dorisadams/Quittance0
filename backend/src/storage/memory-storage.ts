@@ -73,6 +73,22 @@ type InvoiceNonPaid = InvoiceCommon & {
 
 type Invoice = InvoicePaid | InvoiceNonPaid;
 
+/**
+ * Per-asset stats returned by GET /invoices/stats. Mirrors the frontend
+ * `InvoiceStats` (frontend/lib/utils.ts). Fields are `string | number`
+ * because the SQL path (invoice.service.ts) returns BigInt-strigified
+ * columns from node-postgres while the in-memory path returns raw
+ * JavaScript numbers.
+ */
+export interface InvoiceStats {
+  total_invoices: string | number;
+  paid_invoices: string | number;
+  pending_invoices: string | number;
+  expired_invoices: string | number;
+  total_revenue: string | number;
+  asset_code: string;
+}
+
 class MemoryStorage {
   private invoices: Map<string, Invoice> = new Map();
   private invoicesByMemo: Map<string, string> = new Map(); // memo -> invoice id
@@ -190,7 +206,7 @@ class MemoryStorage {
   }
 
   // Get stats
-  getStats(sellerPublicKey: string): any {
+  getStats(sellerPublicKey: string): InvoiceStats {
     const invoices = Array.from(this.invoices.values()).filter(
       inv => inv.sellerPublicKey === sellerPublicKey
     );

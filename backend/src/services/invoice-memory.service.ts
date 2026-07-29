@@ -1,7 +1,7 @@
 // Invoice service with in-memory storage
 import { generateInvoiceMemo } from '../utils/memo';
 import { CreateInvoiceInput } from '../utils/validation';
-import memoryStorage from '../storage/memory-storage';
+import memoryStorage, { InvoiceStats } from '../storage/memory-storage';
 
 class InvoiceMemoryService {
   /**
@@ -136,7 +136,7 @@ class InvoiceMemoryService {
   /**
    * Get invoice statistics
    */
-  async getInvoiceStats(sellerPublicKey: string): Promise<any> {
+  async getInvoiceStats(sellerPublicKey: string): Promise<InvoiceStats[]> {
     return [memoryStorage.getStats(sellerPublicKey)];
   }
 }
