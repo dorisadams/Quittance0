@@ -1,7 +1,8 @@
 // Invoice service with in-memory storage
 import { generateInvoiceMemo } from '../utils/memo';
 import { CreateInvoiceInput } from '../utils/validation';
-import memoryStorage, { InvoiceStats } from '../storage/memory-storage';
+import memoryStorage from '../storage/memory-storage';
+import { InvoiceStats } from '../utils/invoice-types';
 
 class InvoiceMemoryService {
   /**

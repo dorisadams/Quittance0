@@ -1,5 +1,6 @@
 // In-memory storage - Database yerine MVP için
 import { v4 as uuidv4 } from 'uuid';
+import { InvoiceStats } from '../utils/invoice-types';
 
 /**
  * Backend `Invoice` shape — discriminated union over `status`. Mirrors
@@ -73,21 +74,6 @@ type InvoiceNonPaid = InvoiceCommon & {
 
 type Invoice = InvoicePaid | InvoiceNonPaid;
 
-/**
- * Per-asset stats returned by GET /invoices/stats. Mirrors the frontend
- * `InvoiceStats` (frontend/lib/utils.ts). Fields are `string | number`
- * because the SQL path (invoice.service.ts) returns BigInt-strigified
- * columns from node-postgres while the in-memory path returns raw
- * JavaScript numbers.
- */
-export interface InvoiceStats {
-  total_invoices: string | number;
-  paid_invoices: string | number;
-  pending_invoices: string | number;
-  expired_invoices: string | number;
-  total_revenue: string | number;
-  asset_code: string;
-}
 
 class MemoryStorage {
   private invoices: Map<string, Invoice> = new Map();
