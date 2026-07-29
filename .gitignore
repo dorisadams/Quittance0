@@ -1,0 +1,16 @@
+# Root-level gitignore — frontend/ and backend/ have their own .gitignore files.
+# This file covers repo-level patterns only.
+
+# Session notes and working artifacts
+.session-notes/
+
+# Build artifacts
+*.tsbuildinfo
+*.tsbuildinfo.*
+
+# Dependencies
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
