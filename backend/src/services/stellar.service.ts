@@ -1,5 +1,6 @@
 import * as StellarSdk from '@stellar/stellar-sdk';
 import { server, NETWORK_PASSPHRASE, getSellerKeypair } from '../config/stellar';
+import { getErrorMessage } from '../utils/errors';
 
 export interface PaymentRecord {
   id: string;
@@ -22,9 +23,9 @@ class StellarService {
   async loadAccount(publicKey: string): Promise<StellarSdk.Horizon.AccountResponse> {
     try {
       return await server.loadAccount(publicKey);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(`Error loading account ${publicKey}:`, error);
-      throw new Error(`Account not found or network error: ${error.message}`);
+      throw new Error(`Account not found or network error: ${getErrorMessage(error)}`);
     }
   }
 
@@ -57,11 +58,11 @@ class StellarService {
       
       // Find payment operation
       const paymentOp = operations.records.find(
-        (op: any) => op.type === 'payment' && op.amount === expectedAmount
+      (op: any) => op.type === 'payment' && op.amount === expectedAmount
       );
 
       return !!paymentOp;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Payment verification error:', error);
       return false;
     }
@@ -79,9 +80,9 @@ class StellarService {
         transaction,
         operations: operations.records,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching transaction:', error);
-      throw new Error(`Transaction not found: ${error.message}`);
+      throw new Error(`Transaction not found: ${getErrorMessage(error)}`);
     }
   }
 
@@ -123,9 +124,9 @@ class StellarService {
               console.log('📥 Payment received:', payment);
               onPayment(payment);
             }
-          } catch (error: any) {
+          } catch (error: unknown) {
             console.error('Error processing payment:', error);
-            if (onError) onError(error);
+            if (onError) onError(error instanceof Error ? error : new Error(String(error)));
           }
         },
         onerror: (error: any) => {
@@ -172,9 +173,9 @@ class StellarService {
       }
 
       return paymentRecords;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching recent payments:', error);
-      throw new Error(`Failed to fetch payments: ${error.message}`);
+      throw new Error(`Failed to fetch payments: ${getErrorMessage(error)}`);
     }
   }
 
@@ -216,9 +217,9 @@ class StellarService {
       const result = await server.submitTransaction(transaction);
       console.log('✅ Payment sent:', result.hash);
       return result.hash;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending payment:', error);
-      throw new Error(`Payment failed: ${error.message}`);
+      throw new Error(`Payment failed: ${getErrorMessage(error)}`);
     }
   }
 }

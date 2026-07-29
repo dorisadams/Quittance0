@@ -5,6 +5,7 @@ import { createInvoiceSchema } from './utils/validation';
 import invoiceService from './services/invoice-memory.service';
 import { generatePaymentQR, generateStellarPaymentQR } from './utils/qrcode';
 import { stellarService } from './services/stellar.service';
+import { getErrorMessage } from './utils/errors';
 
 // Load environment variables
 dotenv.config();
@@ -76,11 +77,11 @@ app.post('/api/invoices', async (req: Request, res: Response) => {
         stellarQrCode,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Create invoice error:', error);
     res.status(400).json({
       success: false,
-      error: error.message || 'Failed to create invoice',
+      error: getErrorMessage(error) || 'Failed to create invoice',
     });
   }
 });
@@ -104,11 +105,11 @@ app.get('/api/invoices/stats', async (req: Request, res: Response) => {
       success: true,
       data: stats,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get stats error:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get statistics',
+      error: getErrorMessage(error) || 'Failed to get statistics',
     });
   }
 });
@@ -130,11 +131,11 @@ app.get('/api/invoices/:id', async (req: Request, res: Response) => {
       success: true,
       data: invoice,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get invoice error:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get invoice',
+      error: getErrorMessage(error) || 'Failed to get invoice',
     });
   }
 });
@@ -167,11 +168,11 @@ app.get('/api/invoices', async (req: Request, res: Response) => {
         total: invoices.length,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get invoices error:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get invoices',
+      error: getErrorMessage(error) || 'Failed to get invoices',
     });
   }
 });
@@ -208,11 +209,11 @@ app.get('/api/invoices/:id/payment-info', async (req: Request, res: Response) =>
         invoice,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get payment info error:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to get payment info',
+      error: getErrorMessage(error) || 'Failed to get payment info',
     });
   }
 });
@@ -227,11 +228,11 @@ app.post('/api/invoices/:id/cancel', async (req: Request, res: Response) => {
       success: true,
       data: invoice,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Cancel invoice error:', error);
     res.status(400).json({
       success: false,
-      error: error.message || 'Failed to cancel invoice',
+      error: getErrorMessage(error) || 'Failed to cancel invoice',
     });
   }
 });
@@ -347,11 +348,11 @@ app.post('/api/invoices/:id/verify', async (req: Request, res: Response) => {
       data: updatedInvoice,
       message: 'Payment verified on Stellar',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Verify payment error:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to verify payment',
+      error: getErrorMessage(error) || 'Failed to verify payment',
     });
   }
 });
@@ -400,11 +401,11 @@ app.post('/api/invoices/:id/simulate-payment', async (req: Request, res: Respons
       data: updatedInvoice,
       message: 'Payment simulated successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Simulate payment error:', error);
     res.status(500).json({
       success: false,
-      error: error.message || 'Failed to simulate payment',
+      error: getErrorMessage(error) || 'Failed to simulate payment',
     });
   }
 });

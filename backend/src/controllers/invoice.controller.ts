@@ -4,6 +4,7 @@ import { stellarService } from '../services/stellar.service';
 import { createInvoiceSchema } from '../utils/validation';
 import { generatePaymentQR, generateStellarPaymentQR } from '../utils/qrcode';
 import { SELLER_PUBLIC_KEY } from '../config/stellar';
+import { getErrorMessage } from '../utils/errors';
 
 class InvoiceController {
   async createInvoice(req: Request, res: Response) {
@@ -29,10 +30,10 @@ class InvoiceController {
           stellarQrCode,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({
         success: false,
-        error: error.message || 'Failed to create invoice',
+        error: getErrorMessage(error) || 'Failed to create invoice',
       });
     }
   }
@@ -53,10 +54,10 @@ class InvoiceController {
         success: true,
         data: invoice,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({
         success: false,
-        error: error.message || 'Failed to get invoice',
+        error: getErrorMessage(error) || 'Failed to get invoice',
       });
     }
   }
@@ -81,10 +82,10 @@ class InvoiceController {
           total: invoices.length,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({
         success: false,
-        error: error.message || 'Failed to get invoices',
+        error: getErrorMessage(error) || 'Failed to get invoices',
       });
     }
   }
@@ -98,10 +99,10 @@ class InvoiceController {
         success: true,
         data: invoice,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(400).json({
         success: false,
-        error: error.message || 'Failed to cancel invoice',
+        error: getErrorMessage(error) || 'Failed to cancel invoice',
       });
     }
   }
@@ -163,10 +164,10 @@ class InvoiceController {
         success: true,
         data: updatedInvoice,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({
         success: false,
-        error: error.message || 'Failed to verify payment',
+        error: getErrorMessage(error) || 'Failed to verify payment',
       });
     }
   }
@@ -179,10 +180,10 @@ class InvoiceController {
         success: true,
         data: stats,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({
         success: false,
-        error: error.message || 'Failed to get stats',
+        error: getErrorMessage(error) || 'Failed to get stats',
       });
     }
   }
@@ -219,10 +220,10 @@ class InvoiceController {
           invoice,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({
         success: false,
-        error: error.message || 'Failed to get payment info',
+        error: getErrorMessage(error) || 'Failed to get payment info',
       });
     }
   }

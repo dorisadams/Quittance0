@@ -2,6 +2,7 @@ import { Router } from 'express';
 import invoiceController from '../controllers/invoice.controller';
 import stellarController from '../controllers/stellar.controller';
 import paymentMonitorService from '../services/payment-monitor.service';
+import { getErrorMessage } from '../utils/errors';
 
 const router = Router();
 
@@ -39,10 +40,10 @@ router.post('/payment/sync', async (req, res) => {
       message: `Payment sync completed`,
       limit
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(500).json({
       success: false,
-      error: error.message || 'Sync failed'
+      error: getErrorMessage(error) || 'Sync failed'
     });
   }
 });

@@ -4,6 +4,7 @@ import { generateInvoiceMemo } from '../utils/memo';
 import { CreateInvoiceInput } from '../utils/validation';
 import { SELLER_PUBLIC_KEY } from '../config/stellar';
 import { InvoiceStats } from '../utils/invoice-types';
+import { getErrorMessage } from '../utils/errors';
 
 /**
  * Backend SQL-service `Invoice` shape — discriminated union over `status`.
@@ -113,9 +114,9 @@ class InvoiceService {
       const result = await pool.query(query, values);
       console.log('✅ Invoice created:', result.rows[0].id);
       return this.mapRowToInvoice(result.rows[0]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating invoice:', error);
-      throw new Error(`Failed to create invoice: ${error.message}`);
+      throw new Error(`Failed to create invoice: ${getErrorMessage(error)}`);
     }
   }
 
@@ -211,9 +212,9 @@ class InvoiceService {
       }
 
       return invoice;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error marking invoice as paid:', error);
-      throw new Error(`Failed to update invoice: ${error.message}`);
+      throw new Error(`Failed to update invoice: ${getErrorMessage(error)}`);
     }
   }
 
@@ -227,7 +228,7 @@ class InvoiceService {
     offset: number = 0
   ): Promise<Invoice[]> {
     let query = 'SELECT * FROM invoices WHERE seller_public_key = $1';
-    const params: any[] = [sellerPublicKey];
+    const params: unknown[] = [sellerPublicKey];
 
     if (status) {
       query += ' AND status = $2';
@@ -280,7 +281,7 @@ class InvoiceService {
   /**
    * Log payment event
    */
-  async logPaymentEvent(invoiceId: string, eventType: string, eventData: any): Promise<void> {
+  async logPaymentEvent(invoiceId: string, eventType: string, eventData: Record<string, unknown>): Promise<void> {
     const query = `
       INSERT INTO payment_events (invoice_id, event_type, event_data)
       VALUES ($1, $2, $3)

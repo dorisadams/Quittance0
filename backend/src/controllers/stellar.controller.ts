@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { stellarService } from '../services/stellar.service';
 import { SELLER_PUBLIC_KEY } from '../config/stellar';
+import { getErrorMessage } from '../utils/errors';
 
 class StellarController {
   /**
@@ -23,11 +24,11 @@ class StellarController {
           subentryCount: account.subentry_count,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Get account info error:', error);
       res.status(500).json({
         success: false,
-        error: error.message || 'Failed to get account info',
+        error: getErrorMessage(error) || 'Failed to get account info',
       });
     }
   }
@@ -47,11 +48,11 @@ class StellarController {
         success: true,
         data: payments,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Get payments error:', error);
       res.status(500).json({
         success: false,
-        error: error.message || 'Failed to get payments',
+        error: getErrorMessage(error) || 'Failed to get payments',
       });
     }
   }
@@ -69,11 +70,11 @@ class StellarController {
         success: true,
         data: transaction,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Get transaction error:', error);
       res.status(500).json({
         success: false,
-        error: error.message || 'Failed to get transaction',
+        error: getErrorMessage(error) || 'Failed to get transaction',
       });
     }
   }
@@ -104,11 +105,11 @@ class StellarController {
           amount,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Verify payment error:', error);
       res.status(500).json({
         success: false,
-        error: error.message || 'Failed to verify payment',
+        error: getErrorMessage(error) || 'Failed to verify payment',
       });
     }
   }

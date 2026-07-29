@@ -2,6 +2,7 @@ import { stellarService, PaymentRecord } from './stellar.service';
 import invoiceService from './invoice.service';
 import { SELLER_PUBLIC_KEY } from '../config/stellar';
 import { pool } from '../config/database';
+import { getErrorMessage } from '../utils/errors';
 
 class PaymentMonitorService {
   private closeHandler: (() => void) | null = null;
@@ -132,8 +133,8 @@ class PaymentMonitorService {
       // TODO: Send notification to customer/seller
       // await this.sendPaymentNotification(invoice, payment);
 
-    } catch (error: any) {
-      console.error('❌ Error processing payment:', error);
+    } catch (error: unknown) {
+      console.error('❌ Error processing payment:', getErrorMessage(error));
     }
   }
 
