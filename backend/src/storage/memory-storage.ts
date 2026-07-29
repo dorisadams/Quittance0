@@ -72,7 +72,7 @@ type InvoiceNonPaid = InvoiceCommon & {
   payerPublicKey?: never;
 };
 
-type Invoice = InvoicePaid | InvoiceNonPaid;
+export type Invoice = InvoicePaid | InvoiceNonPaid;
 
 
 class MemoryStorage {

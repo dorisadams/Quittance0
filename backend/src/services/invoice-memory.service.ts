@@ -1,14 +1,14 @@
 // Invoice service with in-memory storage
 import { generateInvoiceMemo } from '../utils/memo';
 import { CreateInvoiceInput } from '../utils/validation';
-import memoryStorage from '../storage/memory-storage';
+import memoryStorage, { Invoice } from '../storage/memory-storage';
 import { InvoiceStats } from '../utils/invoice-types';
 
 class InvoiceMemoryService {
   /**
    * Create a new invoice
    */
-  async createInvoice(input: CreateInvoiceInput): Promise<any> {
+  async createInvoice(input: CreateInvoiceInput): Promise<Invoice> {
     // Seller public key artık frontend'den geliyor!
     if (!input.sellerPublicKey) {
       throw new Error('Seller public key is required');
@@ -39,15 +39,15 @@ class InvoiceMemoryService {
   /**
    * Get invoice by ID
    */
-  async getInvoiceById(id: string): Promise<any | null> {
-    return memoryStorage.getInvoiceById(id);
+  async getInvoiceById(id: string): Promise<Invoice | null> {
+    return memoryStorage.getInvoiceById(id) ?? null;
   }
 
   /**
    * Get invoice by memo
    */
-  async getInvoiceByMemo(memo: string): Promise<any | null> {
-    return memoryStorage.getInvoiceByMemo(memo);
+  async getInvoiceByMemo(memo: string): Promise<Invoice | null> {
+    return memoryStorage.getInvoiceByMemo(memo) ?? null;
   }
 
   /**
@@ -58,7 +58,7 @@ class InvoiceMemoryService {
     txHash: string,
     payerPublicKey: string,
     payerInfo?: { payerName?: string; payerEmail?: string }
-  ): Promise<any> {
+  ): Promise<Invoice> {
     const invoice = memoryStorage.markAsPaid(invoiceId, txHash, payerPublicKey, payerInfo);
 
     if (!invoice) {
@@ -104,7 +104,7 @@ class InvoiceMemoryService {
     status?: string,
     limit: number = 50,
     offset: number = 0
-  ): Promise<any[]> {
+  ): Promise<Invoice[]> {
     let invoices = memoryStorage.getAllInvoices(status ? { status } : undefined);
 
     if (sellerPublicKey) {
@@ -117,14 +117,14 @@ class InvoiceMemoryService {
   /**
    * Cancel an invoice
    */
-  async cancelInvoice(invoiceId: string): Promise<any> {
+  async cancelInvoice(invoiceId: string): Promise<Invoice> {
     const invoice = memoryStorage.getInvoiceById(invoiceId);
 
     if (!invoice || invoice.status !== 'PENDING') {
       throw new Error('Invoice not found or already processed');
     }
 
-    return memoryStorage.updateInvoice(invoiceId, { status: 'CANCELLED' });
+    return memoryStorage.updateInvoice(invoiceId, { status: 'CANCELLED' })!;
   }
 
   /**
