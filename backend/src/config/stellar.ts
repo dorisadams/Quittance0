@@ -31,13 +31,13 @@ export const validateStellarConfig = () => {
 
   try {
     StellarSdk.Keypair.fromPublicKey(SELLER_PUBLIC_KEY);
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Invalid SELLER_PUBLIC_KEY');
   }
 
   try {
     StellarSdk.Keypair.fromSecret(SELLER_SECRET_KEY);
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Invalid SELLER_SECRET_KEY');
   }
 
