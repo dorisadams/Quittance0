@@ -2,7 +2,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { pool } from '../config/database';
 import { generateInvoiceMemo } from '../utils/memo';
 import { CreateInvoiceInput } from '../utils/validation';
-import { SELLER_PUBLIC_KEY } from '../config/stellar';
 import { InvoiceStats } from '../utils/invoice-types';
 import { getErrorMessage } from '../utils/errors';
 
@@ -96,7 +95,7 @@ class InvoiceService {
     const values = [
       id,
       userId || null,
-      SELLER_PUBLIC_KEY,
+      input.sellerPublicKey,
       input.sellerName || null,
       input.sellerEmail || null,
       input.amount,

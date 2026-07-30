@@ -7,22 +7,28 @@ import { getErrorMessage } from '../utils/errors';
 class PaymentMonitorService {
   private closeHandler: (() => void) | null = null;
   private isRunning: boolean = false;
+  private currentPublicKey: string = SELLER_PUBLIC_KEY;
 
   /**
-   * Start monitoring payments for the seller account
+   * Start monitoring payments for a seller account.
+   * Accepts a dynamic `publicKey` parameter; defaults to the
+   * static `SELLER_PUBLIC_KEY` env var for backward compatibility
+   * with the full `server.ts` entry point (Phase E2 will add a
+   * per-key stream registry).
    */
-  start() {
+  start(publicKey: string = SELLER_PUBLIC_KEY) {
     if (this.isRunning) {
       console.log('⚠️ Payment monitor is already running');
       return;
     }
 
-    console.log('🚀 Starting payment monitor...');
+    console.log('🚀 Starting payment monitor for:', publicKey);
     this.isRunning = true;
+    this.currentPublicKey = publicKey;
 
     // Start streaming payments
     this.closeHandler = stellarService.streamPayments(
-      SELLER_PUBLIC_KEY,
+      publicKey,
       this.handlePayment.bind(this),
       this.handleError.bind(this)
     );
@@ -177,7 +183,7 @@ class PaymentMonitorService {
       if (this.isRunning) {
         console.log('🔄 Attempting to restart payment stream...');
         this.stop();
-        this.start();
+        this.start(this.currentPublicKey);
       }
     }, 5000);
   }
@@ -196,13 +202,13 @@ class PaymentMonitorService {
   }
 
   /**
-   * Manual sync - fetch recent payments and process them
+   * Manual sync — fetch recent payments for a seller and process them.
    */
-  async manualSync(limit: number = 50) {
-    console.log('🔄 Starting manual payment sync...');
+  async manualSync(limit: number = 50, publicKey: string = SELLER_PUBLIC_KEY) {
+    console.log('🔄 Starting manual payment sync for:', publicKey);
 
     try {
-      const payments = await stellarService.getRecentPayments(SELLER_PUBLIC_KEY, limit);
+      const payments = await stellarService.getRecentPayments(publicKey, limit);
       
       for (const payment of payments) {
         await this.handlePayment(payment);

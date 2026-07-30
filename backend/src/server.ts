@@ -35,6 +35,7 @@ app.get('/', (req: Request, res: Response) => {
     name: 'Quittance API',
     version: '1.0.0',
     status: 'running',
+    mode: 'PostgreSQL — Dynamic Seller',
     documentation: '/api/health',
   });
 });
@@ -62,8 +63,14 @@ async function initialize() {
     validateStellarConfig();
     paymentMonitorService.start();
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`API: http://localhost:${PORT}/api`);
+      console.log('\n🚀 Quittance Backend (PostgreSQL Mode)');
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log(`📍 API: http://localhost:${PORT}/api`);
+      console.log(`🏥 Health: http://localhost:${PORT}/api/health`);
+      console.log(`💾 Storage: PostgreSQL`);
+      console.log(`💰 Dynamic Seller: Each user uses their own wallet`);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     });
   } catch (error) {
     console.error('Failed to start:', error);

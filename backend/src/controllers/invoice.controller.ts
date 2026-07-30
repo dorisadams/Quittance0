@@ -3,7 +3,6 @@ import invoiceService from '../services/invoice.service';
 import { stellarService } from '../services/stellar.service';
 import { createInvoiceSchema } from '../utils/validation';
 import { generatePaymentQR, generateStellarPaymentQR } from '../utils/qrcode';
-import { SELLER_PUBLIC_KEY } from '../config/stellar';
 import { getErrorMessage } from '../utils/errors';
 import type { Horizon } from '@stellar/stellar-sdk';
 
@@ -65,10 +64,17 @@ class InvoiceController {
 
   async getInvoices(req: Request, res: Response) {
     try {
-      const { status, limit = 50, offset = 0 } = req.query;
+      const { status, limit = 50, offset = 0, sellerPublicKey } = req.query;
+
+      if (!sellerPublicKey || typeof sellerPublicKey !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'sellerPublicKey query parameter is required',
+        });
+      }
 
       const invoices = await invoiceService.getInvoicesBySeller(
-        SELLER_PUBLIC_KEY,
+        sellerPublicKey,
         status as string | undefined,
         parseInt(limit as string),
         parseInt(offset as string)
@@ -177,7 +183,16 @@ class InvoiceController {
 
   async getStats(req: Request, res: Response) {
     try {
-      const stats = await invoiceService.getInvoiceStats(SELLER_PUBLIC_KEY);
+      const { sellerPublicKey } = req.query;
+
+      if (!sellerPublicKey || typeof sellerPublicKey !== 'string') {
+        return res.status(400).json({
+          success: false,
+          error: 'sellerPublicKey query parameter is required',
+        });
+      }
+
+      const stats = await invoiceService.getInvoiceStats(sellerPublicKey);
 
       res.json({
         success: true,

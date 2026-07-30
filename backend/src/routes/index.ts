@@ -11,7 +11,8 @@ router.get('/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    service: 'Quittance API'
+    service: 'Quittance API',
+    mode: 'PostgreSQL — Dynamic Seller',
   });
 });
 
