@@ -91,6 +91,7 @@ describe('invoiceMemoryService.markAsPaid — type-contract invariant (commit 8b
       // payerPublicKey: omitted intentionally to trigger the invariant
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional malformed test fixture to trigger invariant
     } as any);
 
     await expect(
@@ -121,6 +122,7 @@ describe('invoiceMemoryService.markAsPaid — type-contract invariant (commit 8b
       payerPublicKey: 'GPAYER_TRIP2',
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional malformed test fixture to trigger invariant
     } as any);
 
     await expect(
@@ -151,6 +153,7 @@ describe('invoiceMemoryService.markAsPaid — type-contract invariant (commit 8b
       payerPublicKey: 'GPAYER_TRIP3',
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- intentional malformed test fixture to trigger invariant
     } as any);
 
     await expect(

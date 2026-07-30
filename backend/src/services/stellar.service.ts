@@ -34,7 +34,9 @@ class StellarService {
    */
   async getBalance(publicKey: string): Promise<Array<{ assetCode: string; balance: string }>> {
     const account = await this.loadAccount(publicKey);
-    return account.balances.map((balance: any) => ({
+    return account.balances.map(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Stellar SDK Horizon.BalanceLine discriminator
+      (balance: any) => ({
       assetCode: balance.asset_type === 'native' ? 'XLM' : balance.asset_code,
       balance: balance.balance,
     }));
@@ -58,6 +60,7 @@ class StellarService {
       
       // Find payment operation
       const paymentOp = operations.records.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Stellar SDK OperationRecord discriminated union
       (op: any) => op.type === 'payment' && op.amount === expectedAmount
       );
 
@@ -71,7 +74,10 @@ class StellarService {
   /**
    * Get transaction details
    */
-  async getTransaction(txHash: string): Promise<any> {
+  async getTransaction(txHash: string): Promise<{
+    transaction: StellarSdk.Horizon.ServerApi.TransactionRecord;
+    operations: StellarSdk.Horizon.ServerApi.OperationRecord[];
+  }> {
     try {
       const transaction = await server.transactions().transaction(txHash).call();
       const operations = await server.operations().forTransaction(txHash).call();
@@ -101,6 +107,7 @@ class StellarService {
       .forAccount(publicKey)
       .cursor('now')
       .stream({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Stellar SDK stream callback record type
         onmessage: async (record: any) => {
           try {
             if (record.type === 'payment' && record.to === publicKey) {
@@ -129,6 +136,7 @@ class StellarService {
             if (onError) onError(error instanceof Error ? error : new Error(String(error)));
           }
         },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Stellar SDK stream onerror event type
         onerror: (error: any) => {
           console.error('❌ Payment stream error:', error);
           if (onError) onError(error);

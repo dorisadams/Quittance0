@@ -324,6 +324,7 @@ class InvoiceService {
    * through (e.g. a future partial SQL UPDATE that set status without
    * the on-chain tx info).
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- node-postgres returns any[] for query rows; see mapRowToInvoice docstring
   private mapRowToInvoice(row: any): Invoice {
     const common: InvoiceCommon = {
       id: row.id,

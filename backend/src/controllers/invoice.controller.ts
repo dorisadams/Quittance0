@@ -5,6 +5,7 @@ import { createInvoiceSchema } from '../utils/validation';
 import { generatePaymentQR, generateStellarPaymentQR } from '../utils/qrcode';
 import { SELLER_PUBLIC_KEY } from '../config/stellar';
 import { getErrorMessage } from '../utils/errors';
+import type { Horizon } from '@stellar/stellar-sdk';
 
 class InvoiceController {
   async createInvoice(req: Request, res: Response) {
@@ -130,7 +131,9 @@ class InvoiceController {
 
       const txDetails = await stellarService.getTransaction(txHash);
       const transaction = txDetails.transaction;
-      const paymentOp = txDetails.operations.find((op: any) => op.type === 'payment');
+      const paymentOp = txDetails.operations.find(
+        (op) => op.type === 'payment'
+      ) as Horizon.ServerApi.PaymentOperationRecord | undefined;
 
       if (!paymentOp) {
         return res.status(400).json({

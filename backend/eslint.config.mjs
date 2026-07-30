@@ -15,7 +15,7 @@ export default tseslint.config(
       // Catch unused variables (ignore underscore-prefixed)
       '@typescript-eslint/no-unused-vars': [
         'warn',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
       // Allow `require` for dynamic imports (e.g. tsx)
       '@typescript-eslint/no-require-imports': 'off',

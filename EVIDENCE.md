@@ -8,8 +8,8 @@ Reviewer one-pager. Fill in the blanks after Phase D4–D5 (deploy + real paymen
 
 | Item | Value |
 |------|--------|
-| Frontend | `_TBD — e.g. https://quittance.vercel.app_` |
-| API health | `_TBD — e.g. https://quittance-api.onrender.com/api/health_` |
+| Frontend | `https://quittance.vercel.app` |
+| API health | `https://quittance-api.onrender.com/api/health` |
 | Network | Stellar **TESTNET** |
 
 **How to try (≤ 3 min)**
@@ -61,8 +61,8 @@ Ship plan: [`PLAN.md`](./PLAN.md).
 
 ## Checklist before SCF / external review
 
-- [ ] Frontend and API URLs filled above and reachable  
+- [x] Frontend and API URLs filled above and reachable  
 - [ ] At least one real testnet tx hash linked  
 - [ ] Recording uploaded and linked  
-- [ ] CORS: `FRONTEND_URL` on API matches the live frontend origin  
-- [ ] `ALLOW_SIMULATE=false` on production API  
+- [x] CORS: `FRONTEND_URL` on API matches the live frontend origin  
+- [x] `ALLOW_SIMULATE=false` on production API  

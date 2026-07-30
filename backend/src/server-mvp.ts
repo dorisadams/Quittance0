@@ -6,6 +6,7 @@ import invoiceService from './services/invoice-memory.service';
 import { generatePaymentQR, generateStellarPaymentQR } from './utils/qrcode';
 import { stellarService } from './services/stellar.service';
 import { getErrorMessage } from './utils/errors';
+import type { Horizon } from '@stellar/stellar-sdk';
 
 // Load environment variables
 dotenv.config();
@@ -294,7 +295,9 @@ app.post('/api/invoices/:id/verify', async (req: Request, res: Response) => {
 
     const txDetails = await stellarService.getTransaction(txHash);
     const transaction = txDetails.transaction;
-    const paymentOp = txDetails.operations.find((op: any) => op.type === 'payment');
+    const paymentOp = txDetails.operations.find(
+      (op) => op.type === 'payment'
+    ) as Horizon.ServerApi.PaymentOperationRecord | undefined;
 
     if (!paymentOp) {
       return res.status(400).json({
