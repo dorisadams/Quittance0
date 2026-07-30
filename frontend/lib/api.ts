@@ -99,6 +99,16 @@ const realInvoiceApi = {
     });
     return response.data;
   },
+
+  send: async (id: string): Promise<ApiResponse<{ id: string }>> => {
+    const response = await api.post<ApiResponse<{ id: string }>>(`/invoices/${id}/send`);
+    return response.data;
+  },
+
+  emailProof: async (id: string): Promise<ApiResponse<{ id: string }>> => {
+    const response = await api.post<ApiResponse<{ id: string }>>(`/invoices/${id}/email-proof`);
+    return response.data;
+  },
 };
 
 export const invoiceApi: typeof realInvoiceApi = USE_MOCK_API

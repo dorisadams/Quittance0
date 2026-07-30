@@ -38,8 +38,11 @@ export default function InvoiceCard({ invoice }: InvoiceCardProps) {
     toast.success('Opening payment proof');
   };
 
-  const handleEmailShare = () => {
-    shareInvoiceByEmail(invoice);
+  const handleEmailShare = async () => {
+    const sent = await shareInvoiceByEmail(invoice);
+    if (sent) {
+      toast.success(invoice.status === 'PAID' ? 'Payment proof emailed' : 'Invoice link emailed');
+    }
   };
 
   return (

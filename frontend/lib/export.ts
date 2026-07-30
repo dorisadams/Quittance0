@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import type { Transaction } from '@/components/TransactionHistory';
 import type { Invoice } from '@/lib/utils';
+import { invoiceApi } from '@/lib/api';
 
 
 
@@ -693,34 +694,58 @@ export function openInvoicePDF(invoice: Invoice) {
   }
 }
 
-export function shareInvoiceByEmail(invoice: Invoice) {
+/**
+ * Send invoice or proof via the backend Resend API.
+ * Falls back to `mailto:` if the API is unavailable (no RESEND_API_KEY configured).
+ * Returns `true` if sent via API, `false` if it fell back to mailto.
+ */
+export async function shareInvoiceByEmail(invoice: Invoice): Promise<boolean> {
   if (!invoice.customerEmail) {
     throw new Error('Client email is required to send this invoice');
   }
 
+  const endpoint = invoice.status === 'PAID' ? 'emailProof' : 'send';
+
+  try {
+    const result = invoice.status === 'PAID'
+      ? await invoiceApi.emailProof(invoice.id)
+      : await invoiceApi.send(invoice.id);
+
+    if (result.success) {
+      return true; // sent via Resend
+    }
+    throw new Error(result.error || 'API returned failure');
+  } catch {
+    // Fall back to mailto: if API is down or Resend is not configured
+    fallbackMailto(invoice);
+    return false;
+  }
+}
+
+function fallbackMailto(invoice: Invoice) {
   const subject = `Invoice #${invoice.id.substring(0, 8).toUpperCase()} - ${invoice.amount} ${invoice.assetCode}`;
   const isPaid = invoice.status === 'PAID';
-  
+
   let body = `Invoice Details:\n`;
   body += `Invoice ID: ${invoice.id}\n`;
   body += `Amount: ${invoice.amount} ${invoice.assetCode}\n`;
   body += `Status: ${invoice.status}\n`;
-  
+
   if (invoice.customerName) body += `Client: ${invoice.customerName}\n`;
   if (invoice.description) body += `Description: ${invoice.description}\n`;
-  
-  if (invoice.status === 'PAID') {
+
+  if (isPaid) {
     body += `\nPayment Information:\n`;
-    body += `Payment Date: ${format(new Date(invoice.paidAt), 'PPpp')}\n`;
+    body += `Payment Date: ${format(new Date(invoice.paidAt!), 'PPpp')}\n`;
     body += `Transaction Hash: ${invoice.paymentTxHash}\n`;
     body += `Payer Address: ${invoice.payerPublicKey}\n`;
     body += `Verified on Stellar Blockchain\n`;
   } else {
     body += `\nQuittance: ${window.location.origin}/pay/${invoice.id}\n`;
   }
-  
+
   body += `\nPowered by Quittance`;
-  
+
   const mailtoLink = `mailto:${invoice.customerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   window.location.href = mailtoLink;
 }

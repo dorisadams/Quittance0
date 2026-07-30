@@ -33,12 +33,15 @@ export default function PaymentReceipt({ invoice }: PaymentReceiptProps) {
     toast.success('Opening payment proof');
   };
 
-  const handleEmailProof = () => {
+  const handleEmailProof = async () => {
     if (!invoice.customerEmail) {
       toast.error('No client email on this invoice');
       return;
     }
-    shareInvoiceByEmail(invoice);
+    const sent = await shareInvoiceByEmail(invoice);
+    if (sent) {
+      toast.success('Payment proof emailed');
+    }
   };
 
   const handleDownload = () => {
