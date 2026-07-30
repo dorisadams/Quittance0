@@ -13,7 +13,7 @@ Stack: Next.js 14 frontend + Express/TS MVP backend + Stellar Horizon (no smart 
 - Not SustainOpen/Stellink payment-link/escrow. Do not propose marketplace/Upwork.
 - Identity = Freighter only. Email = optional mailto delivery. No Google gate for create/pay.
 - Sharp user: freelancer → client, XLM first / USDC later.
-- Demo path: `backend` `npm run start:mvp` / `dev:mvp` (in-memory). Full Postgres `server.ts` exists but is secondary and known out of sync (static env seller).
+- Demo path: `backend` `npm run start:mvp` / `dev:mvp` (in-memory). Full Postgres `server.ts` now aligned with dynamic `sellerPublicKey` (Phase E1).
 
 ## Shipped status (owner claim, Jul 2026)
 
@@ -27,8 +27,12 @@ Stack: Next.js 14 frontend + Express/TS MVP backend + Stellar Horizon (no smart 
 | Simulate UI removed; API gated by `ALLOW_SIMULATE` | Done |
 | Landing redesign (no Stellink watermark JPG bg) | Done |
 | Payment loading toast dismiss bug | Fixed |
-| Public deploy + EVIDENCE filled | Not done |
-| Postgres / SMTP / analytics / Sentry | Not done |
+| Public deploy + EVIDENCE filled | ✅ Deployed (Vercel + Render, see EVIDENCE.md) |
+| Postgres + dynamic sellerPublicKey | ✅ Full `server.ts` aligned (Phase E1) |
+| Redis / Bull dead code | ✅ Removed (Phase E6) |
+| Backend ESLint any-type warnings | ✅ 0 warnings (56→0) |
+| Transactional email (Resend) | 🔄 Backend ready (Phase E3) |
+| SMTP / analytics / Sentry | Not done |
 
 ## Key paths
 
@@ -64,16 +68,16 @@ Storage: in-memory Map; restart clears data.
 
 ## Known gaps / risks (pre-reported; verify and extend)
 
-1. No public URL yet — production/demo incomplete.
+1. ~~No public URL yet.~~ **Resolved:** deployed to Vercel + Render (see EVIDENCE.md).
 2. In-memory = not production persistence.
-3. Full `server.ts` + PG still uses env `SELLER_PUBLIC_KEY` in places — do not mix with MVP demo.
+3. ~~Full `server.ts` + PG still uses env `SELLER_PUBLIC_KEY`~~ **Resolved (Phase E1).**
 4. `GoogleLogin.tsx` / `lib/auth.ts` mock may still exist as dead code.
 5. `Quittance.jpg` historically contained Stellink branding; landing should not use it as watermark (text brand preferred).
 6. USDC needs trustlines — XLM is the reliable demo path.
 7. Client PDF is print-to-PDF HTML, not server PDF.
 8. No Sentry/analytics/feedback loop yet (Journey Mastery gaps).
-9. Redis/Bull deps largely unused on MVP path.
-10. Backend `tsc` may still have pre-existing stellar.service typing noise.
+9. ~~Redis/Bull deps largely unused.~~ **Resolved (Phase E6):** `redis.ts`, `bull`, `ioredis` removed.
+10. ~~Backend `tsc` / Stellar typing noise.~~ **Resolved:** 0 ESLint warnings, 0 tsc errors on both stacks.
 
 ## Goals of review
 

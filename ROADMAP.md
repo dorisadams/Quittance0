@@ -32,3 +32,15 @@ D4–D5 deploy + testnet pack
 ```
 
 Ask before each git commit. One commit = one PLAN.md row.
+
+## Phase E — v0.2 (in progress)
+
+| # | Task | Status |
+|---|------|:------:|
+| 1 | Postgres + dynamic `sellerPublicKey` (align full server) | ✅ |
+| 2 | Per-seller payment monitor | 🔲 |
+| 3 | SMTP / Gmail API — Resend transactional email | 🔄 backend done, frontend wiring pending |
+| 4 | Server-side PDF | 🔲 |
+| 5 | CI (lint + typecheck + test on every PR) | ✅ |
+| 6 | Remove unused Redis/Bull | ✅ |
+| 7 | Tech-debt docs + deferred followups | 🔄 |

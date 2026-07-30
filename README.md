@@ -14,13 +14,16 @@ Quittance helps freelancers create an invoice, accept payment via link or QR on 
 |------------|--------|
 | Freighter wallet as identity (create + pay) | Done — no Google login gate |
 | Create invoice + payment URL / QR | Done |
-| Optional client email + Send invoice / Email proof (`mailto:`) | Done |
+| Optional client email + Send invoice / Email proof (`mailto:`) | Done (Resend API backend ready) |
 | Horizon-backed payment verify | Done (memo, amount, destination, asset) |
 | Dashboard scoped to connected wallet | Done |
 | Primary **Download Proof** CTA after paid | Done (PDF print flow in browser) |
 | Simulate-payment UI | Removed from demo UI (`ALLOW_SIMULATE=true` only on API) |
-| Public hosted demo + testnet evidence pack | Phase D (not yet) |
-| Postgres persistence / SMTP / Gmail API | After demo (Phase E) |
+| Public hosted demo + testnet evidence pack | ✅ Deployed (see EVIDENCE.md) |
+| Postgres + dynamic `sellerPublicKey` | ✅ Full `server.ts` aligned (Phase E1) |
+| Redis/Bull removed | ✅ Dead code deleted (Phase E6) |
+| Transactional email (Resend) | 🔄 Backend endpoints live, frontend wiring pending |
+| Server-side PDF | 🔲 Phase E4 |
 
 Ship plan: [`PLAN.md`](./PLAN.md).
 
@@ -44,8 +47,9 @@ Identity is the **wallet**. Email is an **optional delivery channel**, not a log
 |-------|------|
 | Frontend | Next.js 14, TypeScript, Tailwind, Freighter |
 | Backend (local / demo) | Express, TypeScript, **in-memory MVP** (`server-mvp.ts`) |
+| Backend (Postgres) | Full `server.ts` with SQL persistence + dynamic seller keys |
 | Chain | Stellar testnet / public via Horizon |
-| Later | PostgreSQL full server (not required for v0.1) |
+| Email | Resend transactional API (`email.service.ts`) |
 
 ---
 
@@ -55,7 +59,7 @@ Identity is the **wallet**. Email is an **optional delivery channel**, not a log
 - [Freighter](https://www.freighter.app/) for wallet flows — see [Freighter docs](https://docs.freighter.app/)
 - Stellar testnet account for real payments ([Laboratory](https://laboratory.stellar.org/#account-creator?network=test))
 
-PostgreSQL and Redis are **not** required for the MVP path below.
+PostgreSQL is **not** required for the MVP path (use `server-mvp.ts`). For the full server (`server.ts`), set `DATABASE_URL` and run `npm run db:migrate`.
 
 ---
 
