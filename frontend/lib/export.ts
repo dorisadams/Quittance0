@@ -676,7 +676,24 @@ export function generateInvoicePDF(invoice: Invoice): string {
 </html>`;
 }
 
-export function openInvoicePDF(invoice: Invoice) {
+export async function openInvoicePDF(invoice: Invoice): Promise<void> {
+  try {
+    const blob = await invoiceApi.downloadProof(invoice.id);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `quittance-proof-${invoice.id.substring(0, 8)}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch {
+    // Fall back to browser print-to-PDF if the API is unavailable
+    legacyInvoicePDF(invoice);
+  }
+}
+
+function legacyInvoicePDF(invoice: Invoice) {
   const pdfContent = generateInvoicePDF(invoice);
   
   // Open in new window for PDF printing

@@ -109,6 +109,11 @@ const realInvoiceApi = {
     const response = await api.post<ApiResponse<{ id: string }>>(`/invoices/${id}/email-proof`);
     return response.data;
   },
+
+  downloadProof: async (id: string): Promise<Blob> => {
+    const response = await api.get(`/invoices/${id}/proof`, { responseType: 'blob' });
+    return response.data;
+  },
 };
 
 export const invoiceApi: typeof realInvoiceApi = USE_MOCK_API

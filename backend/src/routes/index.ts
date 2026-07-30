@@ -4,6 +4,7 @@ import stellarController from '../controllers/stellar.controller';
 import paymentMonitorService from '../services/payment-monitor.service';
 import invoiceService from '../services/invoice.service';
 import { sendInvoiceLink, sendPaymentProof } from '../services/email.service';
+import { generatePaymentProof } from '../services/pdf.service';
 import { getErrorMessage } from '../utils/errors';
 
 const router = Router();
@@ -32,6 +33,35 @@ router.get('/stellar/account', stellarController.getAccountInfo.bind(stellarCont
 router.get('/stellar/payments', stellarController.getPayments.bind(stellarController));
 router.get('/stellar/transaction/:hash', stellarController.getTransaction.bind(stellarController));
 router.post('/stellar/verify-payment', stellarController.verifyPayment.bind(stellarController));
+
+// PDF proof download (server-side pdfkit)
+router.get('/invoices/:id/proof', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const invoice = await invoiceService.getInvoiceById(id);
+
+    if (!invoice) {
+      return res.status(404).json({ success: false, error: 'Invoice not found' });
+    }
+
+    if (invoice.status !== 'PAID') {
+      return res.status(400).json({ success: false, error: 'Invoice is not paid yet' });
+    }
+
+    const pdfBuffer = await generatePaymentProof(invoice);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="quittance-proof-${invoice.id.substring(0, 8)}.pdf"`
+    );
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    res.status(500).json({ success: false, error: message || 'Failed to generate PDF' });
+  }
+});
 
 // Email routes
 router.post('/invoices/:id/send', async (req, res) => {
